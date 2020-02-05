@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import Select from 'react-select';
-import messages from '../../components/messages.js';
 import { injectIntl } from 'react-intl';
+
+import messages from './messages.js';
+import { UserAvatar } from '../user/avatar';
+import { CheckCircle } from '../checkCircle';
 
 const Contributions = props => {
   const mappingLevels = [
@@ -12,6 +15,7 @@ const Contributions = props => {
   ];
 
   const [level, setLevel] = useState(mappingLevels[0]);
+  const [activeStatus, setActiveStatus] = useState(null);
 
   const MappingLevelSelect = () => {
     return (
@@ -25,15 +29,29 @@ const Contributions = props => {
     );
   };
 
-  const displayTasks = taskIds => {
-    let ids = props.tasks.features
-      .filter(t => taskIds.includes(t.properties.taskId))
-      .map(f => f.properties.taskId);
-
-    props.setSelectedTasks(ids);
+  const displayTasks = (taskIds, status) => {
+    if (activeStatus === status) {
+      props.setSelectedTasks([]);
+      setActiveStatus(null);
+    } else {
+      let filteredTasksByStatus = props.tasks.features;
+      if (status === 'MAPPED') {
+        filteredTasksByStatus = filteredTasksByStatus.filter(
+          task => task.properties.taskStatus === 'MAPPED',
+        );
+      }
+      if (status === 'VALIDATED') {
+        filteredTasksByStatus = filteredTasksByStatus.filter(
+          task => task.properties.taskStatus === 'VALIDATED',
+        );
+      }
+      const ids = filteredTasksByStatus
+        .filter(t => taskIds.includes(t.properties.taskId))
+        .map(f => f.properties.taskId);
+      props.setSelectedTasks(ids);
+      setActiveStatus(status);
+    }
   };
-
-  const avatarClass = 'h2 w2 br-100 pa1 ';
 
   let contributionsArray = props.contribsData[2].userContributions;
   if (level.value !== 'ALL') {
@@ -41,47 +59,66 @@ const Contributions = props => {
   }
 
   return (
-    <div className="w-100 f6 pr4 cf">
-      <MappingLevelSelect />
-      {contributionsArray.map(u => {
-        return (
-          <div
-            onMouseEnter={() => displayTasks(u.taskIds)}
-            onMouseLeave={() => props.setSelectedTasks([])}
-            className="dim w-100 flex justify-between pa3 ba b--tan mb2 items-center"
-          >
-            {u.pictureUrl !== null ? (
-              <img className={avatarClass} src={u.pictureUrl} alt={u.username} />
-            ) : (
-              <div className="h2 w2 bg-light-gray ma1 br-100"></div>
-            )}
-            <div className="w-25">
-              {' '}
-              <a
-                className="blue-dark mr2"
-                rel="noopener noreferrer"
-                target="_blank"
-                href={`/users/${u.username}`}
+    <div className="w-100 f5 pr4 cf">
+      <div className="w-100 fr cf">
+        <MappingLevelSelect />
+      </div>
+      <div className="w-100 fl cf">
+        {contributionsArray.map(user => {
+          return (
+            <div className="w-100 cf pa3 ba b--tan mb2">
+              <div className="w-40 fl dib">
+                <UserAvatar picture={user.pictureUrl} username={user.username} />
+                <a
+                  className="blue-dark mr2"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  href={`/users/${user.username}`}
+                >
+                  {user.username}
+                </a>{' '}
+                <span className="f7 ttl">
+                  ({props.intl.formatMessage(messages[`mappingLevel${user.mappingLevel}`])})
+                </span>
+              </div>
+              <div
+                className="w-20 fl tr dib pointer pt2"
+                onClick={() => displayTasks(user.taskIds, 'MAPPED')}
               >
-                {u.username}
-              </a>{' '}
-              <div className="b f7">{u.mappingLevel}</div>
+                <span className="mr1 b self-start">{user.mapped}</span>
+                <span className="ttl mr2">{props.intl.formatMessage(messages.mapped)}</span>
+                <CheckCircle
+                  className={`${
+                    activeStatus === 'MAPPED' ? 'bg-blue-dark' : 'bg-grey-light'
+                  } white`}
+                />
+              </div>
+              <div
+                className="w-20 fl tr dib pointer pt2"
+                onClick={() => displayTasks(user.taskIds, 'VALIDATED')}
+              >
+                <span className="mr1 b">{user.validated}</span>
+                <span className="ttl mr2">{props.intl.formatMessage(messages.validated)}</span>
+                <CheckCircle
+                  className={`${
+                    activeStatus === 'VALIDATED' ? 'bg-blue-dark' : 'bg-grey-light'
+                  } white`}
+                />
+              </div>
+              <div
+                className="w-20 fl tr dib pointer pt2"
+                onClick={() => displayTasks(user.taskIds, 'ALL')}
+              >
+                <span className="mr1 b">{user.total}</span>
+                <span className="ttl mr2">{props.intl.formatMessage(messages.total)}</span>
+                <CheckCircle
+                  className={`${activeStatus === 'ALL' ? 'bg-blue-dark' : 'bg-grey-light'} white`}
+                />
+              </div>
             </div>
-            <div style={{ width: '12%' }} className="flex justify-between">
-              <span className="mr1 b self-start">{u.mapped}</span>
-              <span>mapped</span>
-            </div>
-            <div style={{ width: '12%' }} className="flex justify-between">
-              <span className="mr1 b">{u.validated}</span>
-              <span>validated</span>
-            </div>
-            <div style={{ width: '9%' }} className="flex justify-between">
-              <span className="mr1 b">{u.total}</span>
-              <span>total</span>
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 };
