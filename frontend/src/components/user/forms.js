@@ -48,42 +48,22 @@ function UserInterestsCard() {
   );
 }
 
-function UserInterestsForm() {
+const UserInterestsForm = () => {
   const token = useSelector(state => state.auth.get('token'));
-  const userDetails = useSelector(state => state.auth.get('userDetails'));
-  const [interests, setInterests] = useState([]);
-  const [enableSaveButton, setEnableSaveButton] = useState(false);
-  const [success, setSuccess] = useState(null);
 
-  useLayoutEffect(() => {
+  const getData = (username, token, setInterests) => {
     const getInterests = async username => {
       const data = await fetchLocalJSONAPI(`users/${username}/queries/interests/`, token);
       setInterests(data.interests);
     };
 
-    if (userDetails.username) {
-      getInterests(userDetails.username);
+    if (username) {
+      getInterests(username);
     }
-  }, [token, userDetails]);
-
-  const selectedStyle = 'f7 pa1 br-100 bg-black white absolute right-0 top-0';
-
-  const changeSelect = id => {
-    const index = interests.findIndex(i => i.id === id);
-
-    const copy = interests.map((interest, idx) => {
-      if (idx === index) {
-        interest.userSelected = !interest.userSelected;
-      }
-      return interest;
-    });
-    setEnableSaveButton(true);
-    setSuccess(null);
-    setInterests(copy);
   };
 
-  const updateInterests = () => {
-    const postUpdate = ids => {
+  const updateInterests = (interests, setSuccess, setEnableSaveButton) => {
+    const postUpdate = (ids, setSuccess, setEnableSaveButton) => {
       pushToLocalJSONAPI(
         'users/me/actions/set-interests/',
         JSON.stringify({ interests: ids }),
@@ -99,7 +79,34 @@ function UserInterestsForm() {
     // Get all true ids.
     const trueInterests = interests.filter(i => i.userSelected === true);
     const ids = trueInterests.map(i => i.id);
-    postUpdate(ids);
+    postUpdate(ids, setSuccess, setEnableSaveButton);
+  };
+
+  return <Interests updateInterests={updateInterests} token={token} getData={getData} />;
+};
+
+function Interests({ updateInterests, token, getData }) {
+  const userDetails = useSelector(state => state.auth.get('userDetails'));
+  const [interests, setInterests] = useState([]);
+  const [enableSaveButton, setEnableSaveButton] = useState(false);
+  const [success, setSuccess] = useState(null);
+
+  useLayoutEffect(() => getData(userDetails.username, token, setInterests), [token, userDetails]);
+
+  const selectedStyle = 'f7 pa1 br-100 bg-black white absolute right-0 top-0';
+
+  const changeSelect = id => {
+    const index = interests.findIndex(i => i.id === id);
+
+    const copy = interests.map((interest, idx) => {
+      if (idx === index) {
+        interest.userSelected = !interest.userSelected;
+      }
+      return interest;
+    });
+    setEnableSaveButton(true);
+    setSuccess(null);
+    setInterests(copy);
   };
 
   return (
@@ -129,7 +136,7 @@ function UserInterestsForm() {
         </span>
       )}
       <Button
-        onClick={updateInterests}
+        onClick={() => updateInterests(interests, setSuccess, setEnableSaveButton)}
         className={`${enableSaveButton ? 'bg-blue-dark' : 'bg-grey-light'} white mh1 mv2 dib`}
         disabled={!enableSaveButton}
       >
